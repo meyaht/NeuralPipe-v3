@@ -1,0 +1,67 @@
+{
+  "nominal_diameters": [
+    {
+      "nps_inches": 1,
+      "od_mm": 33.4,
+      "preferred_span_mm": 3048,
+      "max_span_mm": 3962,
+      "lr_elbow_radius_mm": 38.1
+    },
+    {
+      "nps_inches": 2,
+      "od_mm": 60.3,
+      "preferred_span_mm": 4572,
+      "max_span_mm": 5486,
+      "lr_elbow_radius_mm": 76.2
+    },
+    {
+      "nps_inches": 4,
+      "od_mm": 114.3,
+      "preferred_span_mm": 6096,
+      "max_span_mm": 7315,
+      "lr_elbow_radius_mm": 152.4
+    },
+    {
+      "nps_inches": 6,
+      "od_mm": 168.3,
+      "preferred_span_mm": 7620,
+      "max_span_mm": 9144,
+      "lr_elbow_radius_mm": 228.6
+    },
+    {
+      "nps_inches": 8,
+      "od_mm": 219.1,
+      "preferred_span_mm": 9144,
+      "max_span_mm": 10363,
+      "lr_elbow_radius_mm": 304.8
+    },
+    {
+      "nps_inches": 12,
+      "od_mm": 323.9,
+      "preferred_span_mm": 9144,
+      "max_span_mm": 12497,
+      "lr_elbow_radius_mm": 457.2
+    },
+    {
+      "nps_inches": 16,
+      "od_mm": 406.4,
+      "preferred_span_mm": 9144,
+      "max_span_mm": 13716,
+      "lr_elbow_radius_mm": 609.6
+    },
+    {
+      "nps_inches": 18,
+      "od_mm": 457.2,
+      "preferred_span_mm": 9144,
+      "max_span_mm": 14021,
+      "lr_elbow_radius_mm": 685.8
+    },
+    {
+      "nps_inches": 24,
+      "od_mm": 609.6,
+      "preferred_span_mm": 9144,
+      "max_span_mm": 15545,
+      "lr_elbow_radius_mm": 914.4
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+/* NeuralPipe v0.2 — global overrides on top of DARKLY theme */
+
+body {
+    background-color: #0d0d1a;
+}
+
+.js-plotly-plot .plotly .modebar {
+    background: rgba(20, 20, 40, 0.8) !important;
+}
+
+/* Tighten card borders */
+.card {
+    border-color: #2a2a4a !important;
+    background-color: #12121f !important;
+}
+
+/* Input groups */
+.input-group-text {
+    background-color: #1a1a2e;
+    border-color: #3a3a5a;
+    color: #aaa;
+    min-width: 2rem;
+    justify-content: center;
+}
+
+.form-control, .form-select {
+    background-color: #1a1a2e !important;
+    border-color: #3a3a5a !important;
+    color: #eee !important;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(100, 120, 255, 0.25) !important;
+}
+
+/* Nav */
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
