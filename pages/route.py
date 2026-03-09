@@ -389,6 +389,10 @@ def load_gates_file(path, store, sx, sy, sz, ex, ey, ez):
         gates = load_gates(p)
         gate_dicts = [g.to_dict() for g in gates]
         store = store or {}
+        align_angle  = store.get("align_angle",  0.0) or 0.0
+        align_center = store.get("align_center")
+        if align_angle and align_center:
+            gate_dicts = _apply_align_to_gate_dicts(gate_dicts, align_angle, align_center)
         sx = float(sx) if sx is not None else float((store.get("start") or [0,0,0])[0])
         sy = float(sy) if sy is not None else float((store.get("start") or [0,0,0])[1])
         sz = float(sz) if sz is not None else float((store.get("start") or [0,0,0])[2])
@@ -490,11 +494,13 @@ def load_cloud(_, path, opts, cell_mm, store):
                 _log(f"Downsample done: {len(pts):,} pts")
                 _load_state["progress"] = 70
 
+            _align_angle  = 0.0
+            _align_center = None
             if "align" in opts:
                 _log("Aligning to axes (PCA)...")
                 _load_state["status"] = "Aligning to axes..."
-                pts = _align_to_axes(pts)
-                _log("Alignment done.")
+                pts, _align_angle, _align_center = _align_to_axes(pts)
+                _log(f"Alignment done. angle={np.degrees(_align_angle):.2f}°")
 
             _log("Computing bounds...")
             _load_state["status"] = "Computing bounds..."
@@ -531,8 +537,10 @@ def load_cloud(_, path, opts, cell_mm, store):
                 "cloud_bmin":    bmin.tolist(),
                 "cloud_bmax":    bmax.tolist(),
                 "cloud_preview": True,
-                "start": start,
-                "end":   end,
+                "start":         start,
+                "end":           end,
+                "align_angle":   _align_angle,
+                "align_center":  _align_center,
             })
 
             _log("Building figure...")
@@ -858,7 +866,8 @@ def generate_routes(_, sx, sy, sz, ex, ey, ez,
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _align_to_axes(pts: np.ndarray) -> np.ndarray:
+def _align_to_axes(pts: np.ndarray) -> tuple:
+    """PCA-align cloud in XY plane. Returns (aligned_pts, angle_rad, [cx, cy])."""
     n = min(200_000, len(pts))
     sample_xy = pts[np.random.choice(len(pts), n, replace=False), :2]
     c = sample_xy.mean(axis=0)
@@ -868,7 +877,29 @@ def _align_to_axes(pts: np.ndarray) -> np.ndarray:
     ca, sa = float(np.cos(ang)), float(np.sin(ang))
     R = np.array([[ca, -sa, 0.], [sa, ca, 0.], [0., 0., 1.]])
     cx = np.array([c[0], c[1], 0.])
-    return (pts - cx) @ R.T + cx
+    return (pts - cx) @ R.T + cx, float(ang), [float(c[0]), float(c[1])]
+
+
+def _apply_align_to_gate_dicts(gate_dicts: list, angle: float, center_xy: list) -> list:
+    """Rotate gate bbox_3d coordinates by the same PCA transform applied to the cloud."""
+    ca, sa = np.cos(angle), np.sin(angle)
+    R = np.array([[ca, -sa, 0.], [sa, ca, 0.], [0., 0., 1.]])
+    cx = np.array([center_xy[0], center_xy[1], 0.])
+    result = []
+    for g in gate_dicts:
+        g = dict(g)
+        b = g.get("bbox_3d")
+        if b and len(b) == 6:
+            x0, y0, z0, x1, y1, z1 = b
+            corners = np.array([
+                [x0, y0, z0], [x1, y0, z0], [x0, y1, z0], [x1, y1, z0],
+                [x0, y0, z1], [x1, y0, z1], [x0, y1, z1], [x1, y1, z1],
+            ], dtype=float)
+            t = (corners - cx) @ R.T + cx
+            mn, mx = t.min(axis=0), t.max(axis=0)
+            g["bbox_3d"] = [mn[0], mn[1], mn[2], mx[0], mx[1], mx[2]]
+        result.append(g)
+    return result
 
 
 def _gate_edges(gates_data: list) -> go.Scatter3d:
