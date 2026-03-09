@@ -867,16 +867,53 @@ def generate_routes(_, sx, sy, sz, ex, ey, ez,
 # ---------------------------------------------------------------------------
 
 def _align_to_axes(pts: np.ndarray) -> tuple:
-    """PCA-align cloud in XY plane. Returns (aligned_pts, angle_rad, [cx, cy])."""
+    """Align cloud primary axis to nearest cardinal direction using longest-run detection.
+
+    Scans angles 0–179° in 1° steps. For each angle, projects XY points onto
+    that direction, bins at 0.5 m, and finds the longest consecutive run of
+    occupied bins. The angle with the longest run is the primary rack direction
+    (the longest continuous structural line). We snap to the nearest 90° multiple
+    and rotate by the small residual so the rack aligns to a cardinal axis.
+
+    This is more reliable than PCA for pipe racks because PCA measures variance
+    (pulled by symmetric structures and perpendicular pipes) while longest-run
+    measures actual structural continuity.
+
+    Returns (aligned_pts, angle_rad, [cx, cy]).
+    """
     n = min(200_000, len(pts))
-    sample_xy = pts[np.random.choice(len(pts), n, replace=False), :2]
-    c = sample_xy.mean(axis=0)
-    cov = np.cov((sample_xy - c).T)
-    _, vecs = np.linalg.eigh(cov)
-    ang = -np.arctan2(vecs[1, -1], vecs[0, -1])
+    rng = np.random.default_rng(42)
+    xy = pts[rng.choice(len(pts), n, replace=False), :2].astype(np.float64)
+    c = xy.mean(axis=0)
+    xy_c = xy - c
+
+    bin_m = 0.5
+    best_deg = 0
+    best_run = -1
+
+    for deg in range(180):
+        rad = np.deg2rad(deg)
+        proj = xy_c[:, 0] * np.cos(rad) + xy_c[:, 1] * np.sin(rad)
+        lo = proj.min()
+        n_bins = max(1, int((proj.max() - lo) / bin_m) + 1)
+        bins = np.clip(((proj - lo) / bin_m).astype(np.int32), 0, n_bins - 1)
+        occ = np.zeros(n_bins, dtype=bool)
+        occ[bins] = True
+        padded = np.concatenate([[False], occ, [False]])
+        diff = np.diff(padded.astype(np.int8))
+        starts = np.where(diff == 1)[0]
+        ends   = np.where(diff == -1)[0]
+        longest = int((ends - starts).max()) if len(starts) else 0
+        if longest > best_run:
+            best_run = longest
+            best_deg = deg
+
+    snap_deg = round(best_deg / 90) * 90
+    ang = -np.deg2rad(best_deg - snap_deg)
     ca, sa = float(np.cos(ang)), float(np.sin(ang))
     R = np.array([[ca, -sa, 0.], [sa, ca, 0.], [0., 0., 1.]])
     cx = np.array([c[0], c[1], 0.])
+    _log(f"Longest-run axis: {best_deg}° → snap {snap_deg}° → rotate {np.degrees(ang):.2f}°  (run={best_run} bins × {bin_m}m)")
     return (pts - cx) @ R.T + cx, float(ang), [float(c[0]), float(c[1])]
 
 
